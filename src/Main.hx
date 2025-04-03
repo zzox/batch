@@ -22,6 +22,11 @@ class Main extends hxd.App {
 
     var fui : h2d.Flow;
 
+    final offsetX = 128;
+    final offsetY = 128;
+    final width = 32;
+    final height = 32;
+
     override function init() {
         var light = new h3d.scene.fwd.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);
         trace(light.enableSpecular = false);
@@ -42,10 +47,10 @@ class Main extends hxd.App {
 
         final g = new h2d.Graphics(s2d);
         g.beginFill(0xff0000);
-        g.drawRect(128, 128, 1, 128);
-        g.drawRect(128, 128, 128, 1);
-        g.drawRect(128 + 128, 128, 1, 128);
-        g.drawRect(128, 128 + 128, 128, 1);
+        g.drawRect(offsetX, offsetY, 1, height);
+        g.drawRect(offsetX, offsetY, width, 1);
+        g.drawRect(offsetX + width, offsetY, 1, height);
+        g.drawRect(offsetX, offsetY + height, width, 1);
         g.endFill();
         // final boundsRect = new h2d.
 
@@ -97,9 +102,6 @@ class Main extends hxd.App {
         // TODO: justPressed
         final pressed = K.isPressed('S'.code);
         if (pressed && !prevPressed) {
-            final width = 128;
-            final height = 128;
-
             final numItems = 8;
 
             var s = hxd.Window.getInstance();
@@ -113,7 +115,7 @@ class Main extends hxd.App {
                 s3d.render(engine);
 
                 final bounds = new IBounds();
-                bounds.set(128, 128, width, height);
+                bounds.set(offsetX, offsetY, width, height);
                 var pixels = renderTexture.capturePixels(0, 0, bounds);
                 renderTexture.clearF(0, 0, 0, 0);
 
