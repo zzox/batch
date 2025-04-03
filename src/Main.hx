@@ -18,67 +18,7 @@ import h3d.scene.Mesh;
 import h3d.prim.Cube;
 import hxd.Key in K;
 
-class WorldMesh extends h3d.scene.World {
-    override function initChunkSoil(c:h3d.scene.World.WorldChunk) {
-        var cube = new h3d.prim.Cube(chunkSize, chunkSize, 0);
-        cube.addNormals();
-        cube.addUVs();
-        var soil = new h3d.scene.Mesh(cube, c.root);
-        soil.x = c.x;
-        soil.y = c.y;
-        soil.material.texture = h3d.mat.Texture.fromColor(0x408020);
-        soil.material.shadows = true;
-    }
-}
-
-class BillboardShader extends hxsl.Shader {
-    static var SRC = {
-        @:import h3d.shader.BaseMesh;
-		// // Sprite size in world coords
-		// @param var spriteSize:Vec2;
-		// Upper and lower uv coords
-		@param var uvs:Vec4;
-		// // xy = origin, zw = tile offset
-		// @param var offset:Vec4;
-		// @param var tileSize:Vec2;
-
-		@input var props:{
-			var uv:Vec2;
-		};
-		// @input var input:{
-		// 	var position:Vec3;
-		// 	var normal:Vec3;
-		// 	var uv:Vec2;
-		// };
-		// var relativePosition:Vec3;
-		// var transformedPosition:Vec3;
-		var calculatedUV:Vec2;
-        // var texture:Sampler2D;
-		// var pixelColor:Vec4;
-
-        // @:borrow(h3d.shader.Base2d) var texture: Sampler2D;
-
-        // function __init__ () {
-        //     relativePosition.xz *= vec2(0.5, 0.5);
-        //     relativePosition.xz += vec2(0.5, 0.5);
-        // }
-
-        function vertex() {
-            var scale = 1;
-            var center = vec3(0,0,0) * global.modelView.mat3x4();
-            var pos = center + camera.view[0].xyz * relativePosition.x * scale + vec3(0,0,1) * relativePosition.y * scale; // using y-vertex-component data for billboard's z-extent
-            projectedPosition = vec4(pos, 1) * camera.viewProj;
-
-			var uv1 = uvs.xy;
-			var uv2 = uvs.zw;
-			var d = uv2 - uv1;
-			calculatedUV = vec2(props.uv * d + uv1);
-        }
-    }
-}
-
 class Main extends hxd.App {
-
     var shadow :h3d.pass.DefaultShadowMap;
     var tf : h2d.Text;
 
@@ -88,10 +28,6 @@ class Main extends hxd.App {
     var s2:Object;
 
     var fui : h2d.Flow;
-
-    var mat:Material;
-    // var mat2:Material;
-    var shader:BillboardShader;
 
     override function init() {
         var light = new h3d.scene.fwd.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);
@@ -152,117 +88,49 @@ class Main extends hxd.App {
         // });
     }
 
-    var ax:Float = 0.0;
-    var ay:Float = 0.0;
-    var az:Float = 0.0;
-    var angle:Float = 0.0;
-
-    var q:Float = 0.0;
-    // var e:Float = 0.0;
-
     var prevPressed:Bool = false;
 
     override function update(dt:Float) {
-        // if (K.isDown('A'.code)) s.x -= 1;
-        // if (K.isDown('D'.code)) s.x += 1;
-        // if (K.isDown('W'.code)) s.y -= 1;
-        // if (K.isDown('S'.code)) s.y += 1;
-        // if (K.isDown('Q'.code)) q += 0.1;
-        // if (K.isDown('E'.code)) q -= 0.1;
 
         // TODO: justPressed
         final pressed = K.isPressed('S'.code);
-
         if (pressed && !prevPressed) {
             final width = 1024;
             final height = 1024;
 
             var renderTexture = new h3d.mat.Texture(width, height, [h3d.mat.Data.TextureFlags.Target]);
-            // var renderTexture = new h3d.mat.Texture(1024, 1024, [h3d.mat.Data.TextureFlags.Target]);
-            // renderTexture.depthBuffer = new h3d.mat.DepthBuffer(renderTexture.width, renderTexture.height);
-            // // e.clear(0, 1);
             engine.pushTarget(renderTexture);
             s3d.render(engine);
             // s2d.render(engine);
             var pixels = renderTexture.capturePixels();
-            // hxd.File.saveBytes("test.png", pixels.toPNG());
             trace(pixels);
             engine.popTarget();
 
 #if js
-
-            function toBase64( buffer ) {
-                var binary = '';
-                var bytes = new Uint8Array( buffer );
-                var len = bytes.byteLength;
-                trace(bytes);
-                for (i in 0...len) {
-                    binary += String.fromCharCode( bytes[ i ] );
-                }
-                return untyped btoa( binary );
-            }
-
+            // create hidden canvas
             final canvas = cast(Browser.document.createElement('canvas'), CanvasElement);
             canvas.width = width;
             canvas.height = height;
 
+            // add pixels to image and images to canvas
             final context = canvas.getContext2d();
             final image = context.createImageData(width, height);
-
             final data = new Uint8Array(pixels.bytes.getData());
             for (i in 0...data.byteLength) {
                 image.data[i] = data[i];
             }
             context.putImageData(image, 0, 0);
 
-            // trace(pixels.bytes.get(1000000));
-            // var blobObj = new Blob([pixels.bytes.getData()]);
-            // var blobObj = new Blob([pixels.bytes.getData()], {type: "image/png"});
-            // var blobObj = new Blob([new Uint8Array(pixels.bytes.getData()).buffer], {type: "image/png"});
-            // untyped saveAs(blobObj, "test1.png");
-            // trace(pixels.bytes.getData());
-            // Console.log(pixels.bytes.getData());
-            // trace(pixels.bytes.getData().byteLength);
+            // link to download a element
             final link:Dynamic = Browser.document.createElement('a');
-            // link.download = 'f1.png';
-            // link.href = URL.createObjectURL(blobObj);
-            // Console.log(blobObj);
-            // Console.log(URL.createObjectURL(blobObj));
-
-            link.href = 'data:image/png;base64,' + toBase64(pixels.bytes.getData());
-            Console.log('data:image/png;base64,' + toBase64(pixels.bytes.getData()));
-            Console.log(canvas.toDataURL());
-            // link.href = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==';
-
             link.href = canvas.toDataURL();
-
             link.download = 'f2.png';
-
             link.click();
 #else
+            // hxd.File.saveBytes("test.png", pixels.toPNG());
 #end
         }
         prevPressed = pressed;
-
-        // s.setRotation(0, 0, q);
-
-        // final pos = s3d.camera.project(s.x, s.y, s.z + 15, s2d.width, s2d.height);
-        // healthBar.setPosition(pos.x, pos.y);
-
-        // if (Math.random() < 0.5) {
-        //     shader.uvs.set(0.0, 0.0, 0.5, 0.5);
-        // } else {
-        //     shader.uvs.set(0.5, 0.5, 1.0, 1.0);
-        // }
-
-        // if (Math.random() < 0.005) {
-        //     s.material.mainPass.removeShader(shader);
-        //     s.material.mainPass.addShader(new OldBillboardShader());
-        // }
-
-        // trace(ax, ay, az, angle, e, q);
-
-
 
         tf.text = ""+engine.drawCalls;
     }
