@@ -1,21 +1,14 @@
+import haxe.io.Bytes;
+import hxd.Pixels;
+import h2d.col.IBounds;
 import js.html.CanvasElement;
 import js.lib.Uint8Array;
 import js.html.Console;
 import js.Browser;
-import js.html.Document;
-import js.html.URL;
-import js.html.Blob;
-import h3d.mat.Data.Operation;
-import h3d.shader.AnimatedTexture;
-import h2d.Bitmap;
-import h3d.col.Point;
-import h3d.col.Bounds;
-import h3d.mat.Material;
 import h3d.mat.Texture;
 import h3d.scene.Object;
 import h3d.prim.ModelCache;
 import h3d.scene.Mesh;
-import h3d.prim.Cube;
 import hxd.Key in K;
 
 class Main extends hxd.App {
@@ -46,6 +39,15 @@ class Main extends hxd.App {
         // bounds.setMin(new Point(-100, -100, -100));
         // bounds.setMax(new Point(100, 100, 100));
         // s3d.camera.orthoBounds = bounds;
+
+        final g = new h2d.Graphics(s2d);
+        g.beginFill(0xff0000);
+        g.drawRect(128, 128, 1, 128);
+        g.drawRect(128, 128, 128, 1);
+        g.drawRect(128 + 128, 128, 1, 128);
+        g.drawRect(128, 128 + 128, 128, 1);
+        g.endFill();
+        // final boundsRect = new h2d.
 
         var cache = new h3d.prim.ModelCache();
         obj = cache.loadModel(hxd.Res.Model);
@@ -95,26 +97,52 @@ class Main extends hxd.App {
         // TODO: justPressed
         final pressed = K.isPressed('S'.code);
         if (pressed && !prevPressed) {
-            final width = 1024;
-            final height = 1024;
+            final width = 128;
+            final height = 128;
 
-            var renderTexture = new h3d.mat.Texture(width, height, [h3d.mat.Data.TextureFlags.Target]);
-            engine.pushTarget(renderTexture);
-            s3d.render(engine);
+            final numItems = 8;
+
+            var s = hxd.Window.getInstance();
+
+            var renderTexture = new h3d.mat.Texture(s.width, s.height, [h3d.mat.Data.TextureFlags.Target]);
             // s2d.render(engine);
-            var pixels = renderTexture.capturePixels();
-            trace(pixels);
-            engine.popTarget();
 
+            final pixelItems = [];
+            for (_ in 0...numItems) {
+                engine.pushTarget(renderTexture);
+                s3d.render(engine);
+
+                final bounds = new IBounds();
+                bounds.set(128, 128, width, height);
+                var pixels = renderTexture.capturePixels(0, 0, bounds);
+                renderTexture.clearF(0, 0, 0, 0);
+
+                trace(pixels.width, pixels.height);
+                // pixels.sub(512, 512, width, height);
+                // trace(pixels);
+                engine.popTarget();
+
+                pixelItems.push(pixels);
+
+                obj.rotate(0, 0, Math.PI * 2 / numItems);
+            }
+
+            final pixels = new Pixels(width * numItems, height, Bytes.alloc(width * numItems * height * 4), RGBA);
+            var i = 0;
+            for (pi in pixelItems) {
+                trace(i);
+                pixels.blit(i * width, 0, pi, 0, 0, width, height);
+                i++;
+            }
 #if js
             // create hidden canvas
             final canvas = cast(Browser.document.createElement('canvas'), CanvasElement);
-            canvas.width = width;
+            canvas.width = width * numItems;
             canvas.height = height;
 
             // add pixels to image and images to canvas
             final context = canvas.getContext2d();
-            final image = context.createImageData(width, height);
+            final image = context.createImageData(width * numItems, height);
             final data = new Uint8Array(pixels.bytes.getData());
             for (i in 0...data.byteLength) {
                 image.data[i] = data[i];
